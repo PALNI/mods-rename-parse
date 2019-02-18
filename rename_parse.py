@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
-#Takes BEPress output, transforms XML to mods, removes stamped derivatives
-#For Batch Islandora Ingest
 
 import os
 from fnmatch import fnmatch
 import lxml.etree as ET
 
 #Directory where the BEPress metadata and files are
-data_dir = 'foldername_where_your_pdfs_and_metadata_are'
+data_dir = 'foldername'
 
 #XSL transform file
-xsl_filename = 'path/to/your_transform_file.xsl'
+xsl_filename = '/Path/to/your/xsl/transform.xsl'
 
 #Write a complete file inventory for checking later
 for path, subdirs, files in os.walk(data_dir):
@@ -24,9 +22,20 @@ for dirpath, dirnames, filenames in os.walk(data_dir):
     for file in filenames:
         if fnmatch(file, 'stamped.pdf'):
             print('Removing: ' + dirpath + file)
+            logwrite = open('log.txt',"a")  
+            logwrite.write('removing: ' + dirpath + file)
             os.remove(os.path.join(dirpath, file))
 
-#walk the data_dir directory looking for PDFs and XML files
+#DESTRUCTIVE! Removes non-PDF/XML files!            
+for dirpath, dirs, files in os.walk(data_dir):
+    for filename in files:
+        if filename.endswith(('.jpg', '.docx', '.csv', '.zip')):
+            print('Removing: ' + dirpath + filename)
+            logwrite = open('log.txt',"a")  
+            logwrite.write('removing: ' + dirpath + filename)
+            os.remove(os.path.join(dirpath, filename))
+
+#walk the data_dir directory looking for remaining PDFs and XML files
 for parent, _, files in os.walk(data_dir):
     if not files:
         continue
@@ -46,11 +55,7 @@ for parent, _, files in os.walk(data_dir):
     if os.path.splitext(pdf_file)[0] != None:
       new_xml_filename = '{}/{}.xml'.format(parent, os.path.splitext(pdf_file)[0])
     xml_file = '{}/{}'.format(parent, xml_file)
-    if new_xml_filename == 'cats':
-    #if os.path.exists(new_xml_filename):
-        print('cannot rename %s without overwriting an existing file. skipping' % xml_file)
-        continue
-    elif xml_file.endswith('.xml'):
+    if xml_file.endswith('.xml'):
         os.rename(xml_file, new_xml_filename)
         #new_xml_filename = new_xml_filename.decode('utf-8')
         dom = ET.parse(new_xml_filename)
@@ -68,8 +73,17 @@ for parent, _, files in os.walk(data_dir):
         logwrite = open('log.txt',"a")  
         logwrite.write('renamed {} -> {}'.format(xml_file, new_xml_filename) + '\n')
         
-#Write a complete procecessed file inventory for checking later
+#Write a complete processed file inventory for checking later
+N = 0
 for path, subdirs, files in os.walk(data_dir):
     for name in files:
         invwrite = open('processed_file_inventory.txt',"a")  
         invwrite.write(os.path.join(path, name) + '\n')
+    N_c = len(files)
+    N += N_c
+    filecount = str(N_c)
+    invwrite = open('processed_file_inventory.txt',"a")
+    invwrite.write("Files in " + path + ': ' + filecount + '\n')
+
+logwrite.close()
+invwrite.close()
